@@ -1,0 +1,95 @@
+#!/usr/bin/env ruby
+
+require 'trollop'
+require 'octopi'
+
+require 'github-issue-importer'
+
+
+options = Trollop::options do
+  banner <<-EOS
+github-issue-importer imports bugs from a Launchpad project into github issues.
+
+Usage:
+         github-issue-importer [OPTIONS]
+
+Example:
+
+         github-issue-importer --lp-project zookeepr \\
+            --gh-login johnf \\
+            --gh-token 823dadlknf8 \\
+            --gh-repo johnf/zookeepr
+ 
+EOS
+  opt :'lp-project', 'Launchpad project', :type => String
+  opt :'gh-login', 'Github user to login as', :type => String
+  opt :'gh-token', 'Github API token', :type => String
+  opt :'gh-repo', 'Github repository (e.g. johnf/github-issue-importer)', :type => String
+end
+
+Trollop::die :'lp-project', "Please specify a Launchpad project" if options[:'lp-project'].nil?
+Trollop::die :'gh-login', "Please specify a GitHub login" if options[:'gh-login'].nil?
+Trollop::die :'gh-token', "Please specify a GitHub token" if options[:'gh-token'].nil?
+Trollop::die :'gh-repo', "Please specify a GitHub Repository" if options[:'gh-repo'].nil?
+
+options[:'gh-repo-user'], options[:'gh-repo-name'] = options[:'gh-repo'].split('/')
+Trollop::die :'gh-repo', "Please specify a valid GitHub Repository" if options[:'gh-repo-user'].nil? or options[:'gh-repo-name'].nil?
+
+include Octopi
+
+begin
+  gh_user = Octopi::User.find options[:'gh-repo-user']
+rescue Octopi::NotFound
+  $stderr.puts "Could not find the user #{options[:'gh-repo-user']} in the repo name it is either private or doesn't exist"
+  exit 1
+end
+
+begin
+  gh_repo = gh_user.repository options[:'gh-repo-name']
+rescue Octopi::NotFound
+  $stderr.puts "The user #{options[:'gh-repo-user']} doesn't have a repository named #{options[:'gh-repo-name']} or it is private"
+  exit 1
+end
+
+launchpad = GithubIssueImporter::Launchpad.new
+
+bug_entries = launchpad.get_bug_entries options[:'lp-project']
+bug_entries.each do |bug_entry|
+
+  bug = launchpad.get_bug bug_entry
+  puts "Processing Bug #{bug['id']}"
+
+  bug_owner = launchpad.get_owner bug
+  bug_time = Time.parse(bug['date_created'])
+
+  body = "#{bug['description']}\n\n"
+  body += "Launchpad Details: [#LP#{bug['id']}](#{bug['web_link']}) #{bug_owner['display_name']} - #{bug_time}"
+
+  comments = launchpad.get_bug_comments bug
+  authenticated_with :login => options[:'gh-login'], :token => options[:'gh-token'] do
+    issue = Issue.open :user => gh_user, :repo => gh_repo, :params => { :title => bug['title'], :body => body }
+
+    comments.shift # First comment is always the bug description
+    comments.each do |comment|
+      next if comment['content'].blank?
+      comment_owner = launchpad.get_owner comment
+
+      comment_time = Time.parse(comment['date_created'])
+      body = "#{comment['content']}\n\n"
+      body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner['display_name']} - #{comment_time}"
+
+      issue.comment body
+    end
+
+    bug_status = bug_entry['status']
+    if bug_status =~ /^Fix/
+      issue.close!
+    end
+
+    bug_importance = bug_entry['importance']
+    unless bug_importance.blank? or bug_importance == 'Undecided'
+      issue.add_label bug_importance.downcase
+    end
+
+  end
+end
