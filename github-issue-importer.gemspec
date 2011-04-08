@@ -8,9 +8,11 @@ Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.authors     = ['John Ferlito']
   s.email       = ['johnf@inodes.org']
-  s.homepage    = ""
+  s.homepage    = 'http://github.com/johnf/github-issue-importer'
   s.summary     = %q{Launchpad to Github bug importer}
   s.description = %q{Migrate bugs from a Launchpas project into Github Issues}
+  s.license     = 'MIT'
+
 
   s.rubyforge_project = "github-issue-importer"
 
