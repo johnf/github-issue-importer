@@ -1,10 +1,18 @@
 #!/usr/bin/env ruby
 
 require 'trollop'
-require 'octopi'
+require 'octokit'
 
 require 'github-issue-importer'
 
+# Define blank? if it's not already defined
+unless nil.respond_to? :blank?
+  class Object
+    def blank?
+      respond_to?(:empty?) ? empty? : !self
+    end
+  end
+end
 
 options = Trollop::options do
   banner <<-EOS
@@ -35,17 +43,20 @@ Trollop::die :'gh-repo', "Please specify a GitHub Repository" if options[:'gh-re
 options[:'gh-repo-user'], options[:'gh-repo-name'] = options[:'gh-repo'].split('/')
 Trollop::die :'gh-repo', "Please specify a valid GitHub Repository" if options[:'gh-repo-user'].nil? or options[:'gh-repo-name'].nil?
 
-include Octopi
+gh_client = Octokit::Client.new :login => options[:'gh-login'], :oauth_token => options[:'gh-token']
 
 begin
-  gh_user = Octopi::User.find options[:'gh-repo-user']
-rescue Octopi::NotFound
+  gh_user = gh_client.user options[:'gh-repo-user']
+rescue Octokit::Unauthorized, Octokit::Forbidden => e
+  $stderr.puts "Authorization failed: #{e}"
+  exit 1
+rescue Octokit::NotFound
   $stderr.puts "Could not find the user #{options[:'gh-repo-user']} in the repo name it is either private or doesn't exist"
   exit 1
 end
 
 begin
-  gh_repo = gh_user.repository options[:'gh-repo-name']
+  gh_repo = gh_client.repo :username => options[:'gh-repo-user'], :repo => options[:'gh-repo-name']
 rescue Octopi::NotFound
   $stderr.puts "The user #{options[:'gh-repo-user']} doesn't have a repository named #{options[:'gh-repo-name']} or it is private"
   exit 1
@@ -66,30 +77,30 @@ bug_entries.each do |bug_entry|
   body += "Launchpad Details: [#LP#{bug['id']}](#{bug['web_link']}) #{bug_owner['display_name']} - #{bug_time}"
 
   comments = launchpad.get_bug_comments bug
-  authenticated_with :login => options[:'gh-login'], :token => options[:'gh-token'] do
-    issue = Issue.open :user => gh_user, :repo => gh_repo, :params => { :title => bug['title'], :body => body }
 
-    comments.shift # First comment is always the bug description
-    comments.each do |comment|
-      next if comment['content'].blank?
-      comment_owner = launchpad.get_owner comment
-
-      comment_time = Time.parse(comment['date_created'])
-      body = "#{comment['content']}\n\n"
-      body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner['display_name']} - #{comment_time}"
-
-      issue.comment body
-    end
-
-    bug_status = bug_entry['status']
-    if bug_status =~ /^Fix/
-      issue.close!
-    end
-
-    bug_importance = bug_entry['importance']
-    unless bug_importance.blank? or bug_importance == 'Undecided'
-      issue.add_label bug_importance.downcase
-    end
-
+  labels = ['launchpad']
+  bug_importance = bug_entry['importance']
+  unless bug_importance.blank? or bug_importance == 'Undecided'
+    labels << bug_importance.downcase
   end
+
+  issue = gh_client.create_issue gh_repo.full_name, bug['title'], body, :labels => labels.join(",")
+
+  comments.shift # First comment is always the bug description
+  comments.each do |comment|
+    next if comment['content'].blank?
+    comment_owner = launchpad.get_owner comment
+
+    comment_time = Time.parse(comment['date_created'])
+    body = "#{comment['content']}\n\n"
+    body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner['display_name']} - #{comment_time}"
+
+    gh_client.add_comment gh_repo.full_name, issue.number, body, :labels => "lp"
+  end
+
+  bug_status = bug_entry['status']
+  if bug_status =~ /^Fix/
+    gh_client.close_issue gh_repo.full_name, issue.number, :labels => "lpclose"
+  end
+
 end
