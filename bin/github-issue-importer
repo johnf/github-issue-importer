@@ -5,6 +5,14 @@ require 'octopi'
 
 require 'github-issue-importer'
 
+# Define blank? if it's not already defined
+unless nil.respond_to? :blank?
+  class Object
+    def blank?
+      respond_to?(:empty?) ? empty? : !self
+    end
+  end
+end
 
 options = Trollop::options do
   banner <<-EOS
