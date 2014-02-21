@@ -25,4 +25,5 @@ Gem::Specification.new do |s|
   s.add_dependency('trollop')
 
   s.add_development_dependency('awesome_print')
+  s.add_development_dependency('rake')
 end
