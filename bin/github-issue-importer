@@ -43,10 +43,10 @@ Trollop::die :'gh-repo', "Please specify a GitHub Repository" if options[:'gh-re
 options[:'gh-repo-user'], options[:'gh-repo-name'] = options[:'gh-repo'].split('/')
 Trollop::die :'gh-repo', "Please specify a valid GitHub Repository" if options[:'gh-repo-user'].nil? or options[:'gh-repo-name'].nil?
 
-gh_client = Octokit::Client.new :login => options[:'gh-login'], :oauth_token => options[:'gh-token']
+gh_client = Octokit::Client.new :access_token => options[:'gh-token']
 
 begin
-  gh_user = gh_client.user options[:'gh-repo-user']
+  gh_client.user options[:'gh-repo-user']
 rescue Octokit::Unauthorized, Octokit::Forbidden => e
   $stderr.puts "Authorization failed: #{e}"
   exit 1
