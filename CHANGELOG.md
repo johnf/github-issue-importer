@@ -1,4 +1,4 @@
-# Next
+# 0.0.3 (2014-03-10)
 
 * Use the right options to Auth to Github v3 API (@johnf)
 
