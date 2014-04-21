@@ -9,8 +9,18 @@ module GithubIssueImporter
     end
 
     def get_bug_entries(project)
-      bugs = get "https://api.launchpad.net/1.0/#{project}?ws.op=searchTasks"
-      bugs['entries']
+      entries = []
+
+      url = "https://api.launchpad.net/1.0/#{project}?ws.op=searchTasks"
+      loop do
+        bugs = get url
+        entries += bugs['entries']
+
+        url = bugs['next_collection_link']
+        break unless url
+      end
+
+      entries
     end
 
     def get_bug(id)
