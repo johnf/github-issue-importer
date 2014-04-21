@@ -1,6 +1,6 @@
-# Next
+# 0.0.4 (2014-04-21)
 
-* Support multiple pages of launchpad bugs
+* Support multiple pages of launchpad bugs (@johnf)
 
 # 0.0.3 (2014-03-10)
 
