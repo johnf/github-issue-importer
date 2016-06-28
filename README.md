@@ -1,3 +1,9 @@
+# Project Status
+
+All my projects have been on GitHub for a very long time, so I haven't personally used this tool in over two years. It really scratched a once off itch when I was moving some projects from LaunchPad.
+
+While I probably won't do any work on it myself, I'm more than happy to take pull requests and I'll do releases based on those. 
+
 # github-issue-importer
 
 Github Issue Importer imports bugs into github issues. Currently it only
