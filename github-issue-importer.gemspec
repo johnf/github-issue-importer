@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_dependency('octokit')
-  s.add_dependency('trollop')
+  s.add_dependency('optimist')
 
   s.add_development_dependency('awesome_print')
   s.add_development_dependency('rake')
