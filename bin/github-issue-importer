@@ -93,6 +93,10 @@ bug_entries.each do |bug_entry|
 
     comment_time = Time.parse(comment['date_created'])
     body = "#{comment['content']}\n\n"
+    if body.size > 65000
+      puts "Comment body too long, truncating!"
+	    body = body[0,65000] + "\n\n... (comment truncated because it was too long)\n\n"
+    end
     body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner['display_name']} - #{comment_time}"
 
     gh_client.add_comment gh_repo.full_name, issue.number, body
