@@ -74,7 +74,7 @@ bug_entries.each do |bug_entry|
   bug_time = Time.parse(bug['date_created'])
 
   body = "#{bug['description']}\n\n"
-  body += "Launchpad Details: [#LP#{bug['id']}](#{bug['web_link']}) #{bug_owner['display_name']} - #{bug_time}"
+  body += "Launchpad Details: [#LP#{bug['id']}](#{bug['web_link']}) #{bug_owner} - #{bug_time}"
 
   comments = launchpad.get_bug_comments bug
 
@@ -95,9 +95,9 @@ bug_entries.each do |bug_entry|
     body = "#{comment['content']}\n\n"
     if body.size > 65000
       puts "Comment body too long, truncating!"
-	    body = body[0,65000] + "\n\n... (comment truncated because it was too long)\n\n"
+      body = body[0,65000] + "\n\n... (comment truncated because it was too long)\n\n"
     end
-    body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner['display_name']} - #{comment_time}"
+    body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner} - #{comment_time}"
 
     gh_client.add_comment gh_repo.full_name, issue.number, body
   end

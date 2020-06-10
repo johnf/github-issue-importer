@@ -1,5 +1,6 @@
 require 'json'
-require 'open-uri'
+require 'net/http'
+require 'uri'
 
 module GithubIssueImporter
   class Launchpad
@@ -50,14 +51,20 @@ module GithubIssueImporter
       end
 
       if @owners[owner_link].nil?
-        @owners[owner_link] = get owner_link
+	  response = Net::HTTP.get_response(URI.parse(owner_link)).body
+	  if response.include? "User is suspended"
+	    @owners[owner_link] = response[22,response.length].concat("suspended user'")
+	  else
+	    json = JSON.parse response
+	    @owners[owner_link] = json['display_name']
+	  end
       end
 
       @owners[owner_link]
     end
 
     def get(url)
-      JSON.parse open(url).read
+      JSON.parse Net::HTTP.get_response(URI.parse(url)).body
     end
 
   end
