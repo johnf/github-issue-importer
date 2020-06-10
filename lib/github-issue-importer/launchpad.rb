@@ -21,7 +21,7 @@ module GithubIssueImporter
         break unless url
       end
 
-      entries
+      entries.sort_by! { |o| o['date_created'] }
     end
 
     def get_bug(id)
