@@ -88,11 +88,12 @@ bug_entries.each do |bug_entry|
 
   comments.shift # First comment is always the bug description
   comments.each do |comment|
-    next if comment['content'].blank?
     comment_owner = launchpad.get_owner comment
 
+    body = launchpad.get_comment_attachments comment
+
     comment_time = Time.parse(comment['date_created'])
-    body = "#{comment['content']}\n\n"
+    body += "#{comment['content']}\n\n"
     if body.size > 65000
       puts "Comment body too long, truncating!"
       body = body[0,65000] + "\n\n... (comment truncated because it was too long)\n\n"

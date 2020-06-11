@@ -33,6 +33,19 @@ module GithubIssueImporter
       get bug_link
     end
 
+    def get_comment_attachments(comment)
+	comment_attachments_link = comment['bug_attachments_collection_link']
+	comment_attachments = get comment_attachments_link
+	body = ""
+	if !comment_attachments.nil?
+	  comment_attachments['entries'].each do |attachment|
+	    body += "Attachment: [#{attachment['title']}](#{attachment['data_link']})\n"
+	  end
+	  body += "\n"
+	end
+	return body
+    end
+
     def get_bug_comments(id)
       if id.is_a? Hash
         bug_comments_link = id['messages_collection_link']
@@ -64,7 +77,7 @@ module GithubIssueImporter
     end
 
     def get(url)
-      JSON.parse Net::HTTP.get_response(URI.parse(url)).body
+      JSON.parse Net::HTTP.get_response(URI.parse(url)).body rescue nil
     end
 
   end
