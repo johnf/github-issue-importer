@@ -1,3 +1,10 @@
+# 0.0.5 (2020-06-14)
+
+* Fix crash on suspended Launchpad user (@Photon89)
+* Fix crash on comments above size limit by trancating them (@Photon89)
+* Sort bug with respect to creation date (@Photon89)
+* Set links to attachments (@Photon89)
+
 # 0.0.4 (2014-04-21)
 
 * Support multiple pages of launchpad bugs (@johnf)
