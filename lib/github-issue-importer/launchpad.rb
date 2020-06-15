@@ -1,5 +1,6 @@
 require 'json'
-require 'open-uri'
+require 'net/http'
+require 'uri'
 
 module GithubIssueImporter
   class Launchpad
@@ -20,7 +21,7 @@ module GithubIssueImporter
         break unless url
       end
 
-      entries
+      entries.sort_by! { |o| o['date_created'] }
     end
 
     def get_bug(id)
@@ -30,6 +31,19 @@ module GithubIssueImporter
         bug_link = "https://api.launchpad.net/1.0/bugs/#{id}"
       end
       get bug_link
+    end
+
+    def get_comment_attachments(comment)
+	comment_attachments_link = comment['bug_attachments_collection_link']
+	comment_attachments = get comment_attachments_link
+	body = ""
+	if !comment_attachments.nil?
+	  comment_attachments['entries'].each do |attachment|
+	    body += "Attachment: [#{attachment['title']}](#{attachment['data_link']})\n"
+	  end
+	  body += "\n"
+	end
+	return body
     end
 
     def get_bug_comments(id)
@@ -50,14 +64,20 @@ module GithubIssueImporter
       end
 
       if @owners[owner_link].nil?
-        @owners[owner_link] = get owner_link
+	  response = Net::HTTP.get_response(URI.parse(owner_link)).body
+	  if response.include? "User is suspended"
+	    @owners[owner_link] = response[22,response.length].concat("suspended user'")
+	  else
+	    json = JSON.parse response
+	    @owners[owner_link] = json['display_name']
+	  end
       end
 
       @owners[owner_link]
     end
 
     def get(url)
-      JSON.parse open(url).read
+      JSON.parse Net::HTTP.get_response(URI.parse(url)).body rescue nil
     end
 
   end

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'trollop'
+require 'optimist'
 require 'octokit'
 
 require 'github-issue-importer'
@@ -14,7 +14,7 @@ unless nil.respond_to? :blank?
   end
 end
 
-options = Trollop::options do
+options = Optimist::options do
   banner <<-EOS
 github-issue-importer imports bugs from a Launchpad project into github issues.
 
@@ -35,13 +35,13 @@ EOS
   opt :'gh-repo', 'Github repository (e.g. johnf/github-issue-importer)', :type => String
 end
 
-Trollop::die :'lp-project', "Please specify a Launchpad project" if options[:'lp-project'].nil?
-Trollop::die :'gh-login', "Please specify a GitHub login" if options[:'gh-login'].nil?
-Trollop::die :'gh-token', "Please specify a GitHub token" if options[:'gh-token'].nil?
-Trollop::die :'gh-repo', "Please specify a GitHub Repository" if options[:'gh-repo'].nil?
+Optimist::die :'lp-project', "Please specify a Launchpad project" if options[:'lp-project'].nil?
+Optimist::die :'gh-login', "Please specify a GitHub login" if options[:'gh-login'].nil?
+Optimist::die :'gh-token', "Please specify a GitHub token" if options[:'gh-token'].nil?
+Optimist::die :'gh-repo', "Please specify a GitHub Repository" if options[:'gh-repo'].nil?
 
 options[:'gh-repo-user'], options[:'gh-repo-name'] = options[:'gh-repo'].split('/')
-Trollop::die :'gh-repo', "Please specify a valid GitHub Repository" if options[:'gh-repo-user'].nil? or options[:'gh-repo-name'].nil?
+Optimist::die :'gh-repo', "Please specify a valid GitHub Repository" if options[:'gh-repo-user'].nil? or options[:'gh-repo-name'].nil?
 
 gh_client = Octokit::Client.new :access_token => options[:'gh-token']
 
@@ -74,7 +74,7 @@ bug_entries.each do |bug_entry|
   bug_time = Time.parse(bug['date_created'])
 
   body = "#{bug['description']}\n\n"
-  body += "Launchpad Details: [#LP#{bug['id']}](#{bug['web_link']}) #{bug_owner['display_name']} - #{bug_time}"
+  body += "Launchpad Details: [#LP#{bug['id']}](#{bug['web_link']}) #{bug_owner} - #{bug_time}"
 
   comments = launchpad.get_bug_comments bug
 
@@ -88,12 +88,17 @@ bug_entries.each do |bug_entry|
 
   comments.shift # First comment is always the bug description
   comments.each do |comment|
-    next if comment['content'].blank?
     comment_owner = launchpad.get_owner comment
 
+    body = launchpad.get_comment_attachments comment
+
     comment_time = Time.parse(comment['date_created'])
-    body = "#{comment['content']}\n\n"
-    body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner['display_name']} - #{comment_time}"
+    body += "#{comment['content']}\n\n"
+    if body.size > 65000
+      puts "Comment body too long, truncating!"
+      body = body[0,65000] + "\n\n... (comment truncated because it was too long)\n\n"
+    end
+    body += "Launchpad Details: [#LPC#{comment['id']}](#{comment['web_link']}) #{comment_owner} - #{comment_time}"
 
     gh_client.add_comment gh_repo.full_name, issue.number, body
   end
