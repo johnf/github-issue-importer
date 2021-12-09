@@ -33,6 +33,7 @@ EOS
   opt :'gh-login', 'Github user to login as', :type => String
   opt :'gh-token', 'Github API token', :type => String
   opt :'gh-repo', 'Github repository (e.g. johnf/github-issue-importer)', :type => String
+  opt :sleep, 'Sleep time between Github requests, in seconds', :default => 1
 end
 
 Optimist::die :'lp-project', "Please specify a Launchpad project" if options[:'lp-project'].nil?
@@ -42,6 +43,7 @@ Optimist::die :'gh-repo', "Please specify a GitHub Repository" if options[:'gh-r
 
 options[:'gh-repo-user'], options[:'gh-repo-name'] = options[:'gh-repo'].split('/')
 Optimist::die :'gh-repo', "Please specify a valid GitHub Repository" if options[:'gh-repo-user'].nil? or options[:'gh-repo-name'].nil?
+Optimist::die :sleep, "Please specify a non-negative sleep time" if options[:sleep] < 0
 
 gh_client = Octokit::Client.new :access_token => options[:'gh-token']
 
@@ -107,5 +109,7 @@ bug_entries.each do |bug_entry|
   if bug_status =~ /^Fix/
     gh_client.close_issue gh_repo.full_name, issue.number
   end
+
+  sleep(options[:sleep])
 
 end
